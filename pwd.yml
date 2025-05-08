@@ -16,6 +16,8 @@ services:
       DB_PORT: "3306"
       MYSQL_ROOT_PASSWORD: admin
       MARIADB_ROOT_PASSWORD: admin
+    depends_on:
+      - install-apps  # Ensure backend starts after HRMS is installed
 
   configurator:
     image: frappe/erpnext:v15.60.2
@@ -29,13 +31,13 @@ services:
       - -c
     command:
       - >
-        ls -1 apps > sites/apps.txt;
         bench set-config -g db_host $$DB_HOST;
         bench set-config -gp db_port $$DB_PORT;
         bench set-config -g redis_cache "redis://$$REDIS_CACHE";
         bench set-config -g redis_queue "redis://$$REDIS_QUEUE";
         bench set-config -g redis_socketio "redis://$$REDIS_QUEUE";
         bench set-config -gp socketio_port $$SOCKETIO_PORT;
+        ls -1 apps > sites/apps.txt;  # Moved to end to include hrms
     environment:
       DB_HOST: db
       DB_PORT: "3306"
@@ -45,6 +47,30 @@ services:
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
+    depends_on:
+      - install-apps  # Ensure configurator runs after HRMS is installed
+
+  install-apps:
+    image: frappe/erpnext:v15.60.2
+    networks:
+      - frappe_network
+    deploy:
+      restart_policy:
+        condition: none
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
+    entrypoint:
+      - bash
+      - -c
+    command:
+      - >
+        bench get-app hrms https://github.com/frappe/hrms.git --branch version-15;
+        echo "hrms" >> sites/apps.txt;
+    depends_on:
+      - db
+      - redis-cache
+      - redis-queue
 
   create-site:
     image: frappe/erpnext:v15.60.2
@@ -77,10 +103,10 @@ services:
           fi
         done;
         echo "sites/common_site_config.json found";
-        bench get-app hrms https://github.com/frappe/hrms.git --branch version-15;
         bench new-site --mariadb-user-host-login-scope='%' --admin-password=admin --db-root-username=root --db-root-password=admin --install-app erpnext --install-app hrms --set-default frontend;
         bench --site frontend install-app hrms;
-        echo "hrms" >> sites/apps.txt;
+    depends_on:
+      - install-apps  # Ensure create-site runs after HRMS is installed
 
   db:
     image: mariadb:10.6
@@ -97,7 +123,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --skip-character-set-client-handshake
-      - --skip-innodb-read-only-compressed # Temporary fix for MariaDB 10.6
+      - --skip-innodb-read-only-compressed
     environment:
       MYSQL_ROOT_PASSWORD: admin
       MARIADB_ROOT_PASSWORD: admin
@@ -110,6 +136,7 @@ services:
       - frappe_network
     depends_on:
       - websocket
+      - install-apps  # Ensure frontend starts after HRMS is installed
     deploy:
       restart_policy:
         condition: on-failure
@@ -145,6 +172,8 @@ services:
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
+    depends_on:
+      - install-apps
 
   queue-short:
     image: frappe/erpnext:v15.60.2
@@ -161,6 +190,8 @@ services:
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
+    depends_on:
+      - install-apps
 
   redis-queue:
     image: redis:6.2-alpine
@@ -192,7 +223,9 @@ services:
       - schedule
     volumes:
       - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
+      - logs:/home/frIVappe/frappe-bench/logs
+    depends_on:
+      - install-apps
 
   websocket:
     image: frappe/erpnext:v15.60.2
@@ -207,6 +240,8 @@ services:
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
+    depends_on:
+      - install-apps
 
 volumes:
   db-data:
