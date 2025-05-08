@@ -77,8 +77,10 @@ services:
           fi
         done;
         echo "sites/common_site_config.json found";
+        bench get-app hrms https://github.com/frappe/hrms.git --branch version-15;
         bench new-site --mariadb-user-host-login-scope='%' --admin-password=admin --db-root-username=root --db-root-password=admin --install-app erpnext --install-app hrms --set-default frontend;
         bench --site frontend install-app hrms;
+        echo "hrms" >> sites/apps.txt;
 
   db:
     image: mariadb:10.6
