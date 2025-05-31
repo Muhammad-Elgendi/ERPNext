@@ -2,7 +2,7 @@ version: "3"
 
 services:
   backend:
-    image: frappe/erpnext:v15.60.2
+    image: frappe/erpnext:v15.63.0
     networks:
       - frappe_network
     deploy:
@@ -18,7 +18,7 @@ services:
       MARIADB_ROOT_PASSWORD: admin
 
   configurator:
-    image: frappe/erpnext:v15.60.2
+    image: frappe/erpnext:v15.63.0
     networks:
       - frappe_network
     deploy:
@@ -47,7 +47,7 @@ services:
       - logs:/home/frappe/frappe-bench/logs
 
   create-site:
-    image: frappe/erpnext:v15.60.2
+    image: frappe/erpnext:v15.63.0
     networks:
       - frappe_network
     deploy:
@@ -78,7 +78,11 @@ services:
         done;
         echo "sites/common_site_config.json found";
         bench new-site --mariadb-user-host-login-scope='%' --admin-password=admin --db-root-username=root --db-root-password=admin --install-app erpnext --set-default frontend;
-
+        cd /home/frappe/frappe-bench/apps;
+        bench get-app hrms;
+        bench --site frontend list-apps;
+        bench --site frontend install-app hrms;
+        bench migrate --skip-failing;
   db:
     image: mariadb:10.6
     networks:
@@ -102,7 +106,7 @@ services:
       - db-data:/var/lib/mysql
 
   frontend:
-    image: frappe/erpnext:v15.60.2
+    image: frappe/erpnext:v15.63.0
     networks:
       - frappe_network
     depends_on:
@@ -125,10 +129,10 @@ services:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
     ports:
-      - "9090:8080"
+      - "8080:8080"
 
   queue-long:
-    image: frappe/erpnext:v15.60.2
+    image: frappe/erpnext:v15.63.0
     networks:
       - frappe_network
     deploy:
@@ -144,7 +148,7 @@ services:
       - logs:/home/frappe/frappe-bench/logs
 
   queue-short:
-    image: frappe/erpnext:v15.60.2
+    image: frappe/erpnext:v15.63.0
     networks:
       - frappe_network
     deploy:
@@ -178,7 +182,7 @@ services:
         condition: on-failure
 
   scheduler:
-    image: frappe/erpnext:v15.60.2
+    image: frappe/erpnext:v15.63.0
     networks:
       - frappe_network
     deploy:
@@ -192,7 +196,7 @@ services:
       - logs:/home/frappe/frappe-bench/logs
 
   websocket:
-    image: frappe/erpnext:v15.60.2
+    image: frappe/erpnext:v15.63.0
     networks:
       - frappe_network
     deploy:
